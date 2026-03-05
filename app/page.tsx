@@ -11,6 +11,7 @@ import {
   Upload,
   Share2,
   Printer,
+  Trash2,
 } from "lucide-react";
 import { getFingerprint } from "@/lib/fingerprint";
 
@@ -403,6 +404,27 @@ export default function HomePage() {
     URL.revokeObjectURL(url);
   }, [result, gallery]);
 
+  const deleteFromGallery = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/gallery?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const message = data?.error || "Could not delete photo";
+        alert(message);
+        return;
+      }
+
+      setGallery((prev) => prev.filter((item) => item.id !== id));
+      setResult((prev) => (prev?.id === id ? null : prev));
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Could not delete photo");
+    }
+  }, []);
+
   // Gallery view
   if (showGallery) {
     return (
@@ -461,34 +483,47 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {gallery.map((item) => (
-                <button
+                <div
                   key={item.id}
-                  onClick={async () => {
-                    const url = item.badgeUrl || item.avatarUrl;
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = `code-brew-${item.id}.png`;
-                    a.click();
-                    URL.revokeObjectURL(blobUrl);
-                  }}
                   className="relative border border-accent/20 bg-muted overflow-hidden group"
                   style={{ aspectRatio: item.badgeUrl ? "1080/1600" : "1/1" }}
                 >
-                  <img
-                    src={item.badgeUrl || item.avatarUrl}
-                    alt="Avatar"
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center">
-                    <Download className="size-6 text-white" />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const url = item.badgeUrl || item.avatarUrl;
+                      const response = await fetch(url);
+                      const blob = await response.blob();
+                      const blobUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = blobUrl;
+                      a.download = `code-brew-${item.id}.png`;
+                      a.click();
+                      URL.revokeObjectURL(blobUrl);
+                    }}
+                    className="w-full h-full"
+                  >
+                    <img
+                      src={item.badgeUrl || item.avatarUrl}
+                      alt="Avatar"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <Download className="size-6 text-white" />
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteFromGallery(item.id)}
+                    className="absolute top-1 right-1 w-7 h-7 bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity hover:bg-red-600"
+                    aria-label="Delete photo"
+                  >
+                    <Trash2 className="size-3.5" strokeWidth={1.75} />
+                  </button>
                   <span className="absolute bottom-1 right-1 text-[8px] text-muted-foreground">
                     {new Date(item.createdAt).toLocaleDateString()}
                   </span>
-                </button>
+                </div>
               ))}
             </div>
           )}
