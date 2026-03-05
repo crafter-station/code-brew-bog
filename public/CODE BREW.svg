@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 769.53 288.61">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        font-family: PixamPixel, Pixam;
+        font-size: 156.1px;
+      }
+
+      .cls-3 {
+        letter-spacing: .26em;
+      }
+
+      .cls-3, .cls-4 {
+        fill: #0a0a0a;
+      }
+
+      .cls-5, .cls-6 {
+        fill: #f03d44;
+      }
+
+      .cls-2, .cls-6 {
+        letter-spacing: .26em;
+      }
+    </style>
+  </defs>
+  <g id="Layer_9" data-name="Layer 9">
+    <g>
+      <text class="cls-2" transform="translate(222.41 258.63)"><tspan class="cls-4" x="0" y="0">BREW</tspan><tspan class="cls-5" x="485.46" y="0">&gt;</tspan></text>
+      <text class="cls-1" transform="translate(0 130.5)"><tspan class="cls-6" x="0" y="0">&lt;</tspan><tspan class="cls-3" x="102.24" y="0">CODE</tspan></text>
+    </g>
+  </g>
+</svg>
