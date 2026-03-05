@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Key ${falKey}`,
         "Content-Type": "application/json",
-        "X-Fal-Request-Timeout": "30"
+        "X-Fal-Request-Timeout": "5000"
       },
       body: JSON.stringify({
         prompt,
