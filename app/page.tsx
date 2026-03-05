@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   Camera,
   SwitchCamera,
@@ -12,6 +12,9 @@ import {
   Share2,
   Printer,
   Trash2,
+  CircleCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { getFingerprint } from "@/lib/fingerprint";
 
@@ -24,6 +27,9 @@ interface AvatarResult {
   badgeUrl?: string | null;
   createdAt: number;
 }
+
+const PRINTED_PHOTOS_STORAGE_KEY = "codebrew.printedPhotos";
+const HIDE_PRINTED_STORAGE_KEY = "codebrew.hidePrintedPhotos";
 
 export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,6 +45,8 @@ export default function HomePage() {
   const [gallery, setGallery] = useState<AvatarResult[]>([]);
   const [showGallery, setShowGallery] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [printedPhotoIds, setPrintedPhotoIds] = useState<Record<string, boolean>>({});
+  const [hidePrintedPhotos, setHidePrintedPhotos] = useState(false);
 
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
@@ -76,6 +84,35 @@ export default function HomePage() {
   useEffect(() => {
     getFingerprint().then(setFingerprint).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    try {
+      const savedPrinted = localStorage.getItem(PRINTED_PHOTOS_STORAGE_KEY);
+      if (savedPrinted) {
+        const parsed = JSON.parse(savedPrinted) as Record<string, boolean>;
+        setPrintedPhotoIds(parsed);
+      }
+
+      if (localStorage.getItem(HIDE_PRINTED_STORAGE_KEY) === "true") {
+        setHidePrintedPhotos(true);
+      }
+    } catch (err) {
+      console.error("Failed to load local gallery state:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(PRINTED_PHOTOS_STORAGE_KEY, JSON.stringify(printedPhotoIds));
+  }, [printedPhotoIds]);
+
+  useEffect(() => {
+    localStorage.setItem(HIDE_PRINTED_STORAGE_KEY, hidePrintedPhotos ? "true" : "false");
+  }, [hidePrintedPhotos]);
+
+  const visibleGallery = useMemo(() => {
+    if (!hidePrintedPhotos) return gallery;
+    return gallery.filter((item) => !printedPhotoIds[item.id]);
+  }, [gallery, hidePrintedPhotos, printedPhotoIds]);
 
 
   const saveToGallery = useCallback((avatar: AvatarResult) => {
@@ -419,10 +456,28 @@ export default function HomePage() {
 
       setGallery((prev) => prev.filter((item) => item.id !== id));
       setResult((prev) => (prev?.id === id ? null : prev));
+      setPrintedPhotoIds((prev) => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     } catch (err) {
       console.error("Delete error:", err);
       alert("Could not delete photo");
     }
+  }, []);
+
+  const togglePrintedPhoto = useCallback((id: string) => {
+    setPrintedPhotoIds((prev) => {
+      const next = { ...prev };
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = true;
+      }
+      return next;
+    });
   }, []);
 
   // Gallery view
@@ -431,6 +486,7 @@ export default function HomePage() {
       <div className="h-dvh flex flex-col bg-background">
         <header className="flex items-center justify-between p-4 border-b border-accent/20">
           <button
+            type="button"
             onClick={() => setShowGallery(false)}
             className="text-xs uppercase tracking-wider text-accent"
           >
@@ -439,50 +495,74 @@ export default function HomePage() {
           <h1 className="text-xs uppercase tracking-widest font-bold">
             Saved Avatars
           </h1>
-          <button
-            onClick={async () => {
-              const badges = gallery.filter((g) => g.badgeUrl);
-              if (badges.length === 0) return;
-              // Pair badges: [0,1], [2,3], etc. Odd last one gets duplicated
-              const pairs: [string, string][] = [];
-              for (let i = 0; i < badges.length; i += 2) {
-                const a = badges[i].badgeUrl!;
-                const b = badges[i + 1]?.badgeUrl ?? a;
-                pairs.push([a, b]);
-              }
-              for (let i = 0; i < pairs.length; i++) {
-                const res = await fetch("/api/print", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ badgeUrls: pairs[i] }),
-                });
-                if (!res.ok) continue;
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `badge-print-${i + 1}.jpg`;
-                link.click();
-                URL.revokeObjectURL(url);
-                // Delay between downloads so browser doesn't block them
-                if (i < pairs.length - 1) await new Promise((r) => setTimeout(r, 500));
-              }
-            }}
-            className="flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
-          >
-            <Printer className="size-3.5" strokeWidth={1.5} />
-            Print
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHidePrintedPhotos((prev) => !prev)}
+              className="flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
+            >
+              {hidePrintedPhotos ? (
+                <>
+                  <Eye className="size-3.5" strokeWidth={1.5} />
+                  Show printed
+                </>
+              ) : (
+                <>
+                  <EyeOff className="size-3.5" strokeWidth={1.5} />
+                  Hide printed
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const badges = visibleGallery.filter(
+                  (g) => g.badgeUrl && !printedPhotoIds[g.id],
+                );
+                if (badges.length === 0) return;
+                // Pair badges: [0,1], [2,3], etc. Odd last one gets duplicated
+                const pairs: [string, string][] = [];
+                for (let i = 0; i < badges.length; i += 2) {
+                  const a = badges[i].badgeUrl!;
+                  const b = badges[i + 1]?.badgeUrl ?? a;
+                  pairs.push([a, b]);
+                }
+                for (let i = 0; i < pairs.length; i++) {
+                  const res = await fetch("/api/print", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ badgeUrls: pairs[i] }),
+                  });
+                  if (!res.ok) continue;
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `badge-print-${i + 1}.jpg`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                  // Delay between downloads so browser doesn't block them
+                  if (i < pairs.length - 1) await new Promise((r) => setTimeout(r, 500));
+                }
+              }}
+              className="flex items-center gap-1 text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
+            >
+              <Printer className="size-3.5" strokeWidth={1.5} />
+              Print
+            </button>
+          </div>
         </header>
         <div className="flex-1 overflow-y-auto p-4">
-          {gallery.length === 0 ? (
+          {visibleGallery.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <ImageIcon className="size-12 mb-4" strokeWidth={1} />
-              <p className="text-xs uppercase tracking-wider">No avatars yet</p>
+              <p className="text-xs uppercase tracking-wider">
+                {gallery.length === 0 ? "No avatars yet" : "No visible avatars"}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {gallery.map((item) => (
+              {visibleGallery.map((item) => (
                 <div
                   key={item.id}
                   className="relative border border-accent/20 bg-muted overflow-hidden group"
@@ -519,6 +599,18 @@ export default function HomePage() {
                     aria-label="Delete photo"
                   >
                     <Trash2 className="size-3.5" strokeWidth={1.75} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePrintedPhoto(item.id)}
+                    className={`absolute top-1 left-1 w-7 h-7 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity ${
+                      printedPhotoIds[item.id]
+                        ? "bg-accent-green hover:bg-accent-green/90"
+                        : "bg-black/70 hover:bg-black/85"
+                    }`}
+                    aria-label={printedPhotoIds[item.id] ? "Mark as unprinted" : "Mark as printed"}
+                  >
+                    <CircleCheck className="size-3.5" strokeWidth={1.75} />
                   </button>
                   <span className="absolute bottom-1 right-1 text-[8px] text-muted-foreground">
                     {new Date(item.createdAt).toLocaleDateString()}
@@ -563,6 +655,7 @@ export default function HomePage() {
           </span>
         </div>
         <button
+          type="button"
           onClick={() => setShowGallery(true)}
           className="relative flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
         >
