@@ -20,3 +20,5 @@ export default async function GalleryPage() {
 
   return <GalleryClient initialGallery={initialGallery} />;
 }
+
+export const dynamic = "force-dynamic";
