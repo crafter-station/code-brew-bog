@@ -8,7 +8,7 @@ import { avatars } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { ratelimit } from "@/lib/ratelimit";
 
-const MAX_GENERATIONS = 3;
+const MAX_GENERATIONS = 13;
 const isDev = process.env.NODE_ENV === "development";
 
 export async function POST(request: NextRequest) {
@@ -133,14 +133,30 @@ export async function POST(request: NextRequest) {
     const { request_id } = await queueRes.json();
     console.log("[ai-avatar] FAL request_id:", request_id);
 
-    // Poll for completion
+    // Poll for completion (check abort signal to avoid orphan polling)
     const statusUrl = `https://queue.fal.run/fal-ai/qwen-image-edit/requests/${request_id}/status`;
     const resultUrl = `https://queue.fal.run/fal-ai/qwen-image-edit/requests/${request_id}`;
-    const falHeaders = { Authorization: `Key ${falKey}` };
+    const cancelUrl = `https://queue.fal.run/fal-ai/qwen-image-edit/requests/${request_id}/cancel`;
+    const falHeaders: Record<string, string> = { Authorization: `Key ${falKey}` };
+
+    const cancelFalJob = async () => {
+      try {
+        await fetch(cancelUrl, { method: "PUT", headers: falHeaders });
+        console.log("[ai-avatar] FAL job cancelled:", request_id);
+      } catch {}
+    };
 
     let completed = false;
     for (let i = 0; i < 60; i++) {
       await new Promise((r) => setTimeout(r, 2000));
+
+      // If client disconnected, cancel FAL job and stop polling
+      if (request.signal.aborted) {
+        console.log("[ai-avatar] Client disconnected, cancelling FAL job");
+        await cancelFalJob();
+        return NextResponse.json({ error: "Request cancelled" }, { status: 499 });
+      }
+
       const statusRes = await fetch(statusUrl, { headers: falHeaders });
       const status = await statusRes.json();
       console.log(`[ai-avatar] qwen-image-edit poll ${i + 1}: ${status.status}`);
@@ -153,6 +169,7 @@ export async function POST(request: NextRequest) {
 
     if (!completed) {
       console.error("[ai-avatar] FAL job timed out after 120s");
+      await cancelFalJob();
       return NextResponse.json({ error: "AI generation timed out" }, { status: 504 });
     }
 
