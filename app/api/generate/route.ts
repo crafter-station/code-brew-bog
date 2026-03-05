@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const falKey = process.env.FAL_KEY || process.env.FAL_API_KEY;
   console.log("[ai-avatar] FAL key present:", !!falKey, "length:", falKey?.length);
-  fal.config({ credentials: falKey });
+  fal.config({ credentials: falKey, "" });
 
   try {
     const formData = await request.formData();
@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Key ${falKey}`,
         "Content-Type": "application/json",
+        "X-Fal-Request-Timeout": "500"
       },
       body: JSON.stringify({
         prompt,
