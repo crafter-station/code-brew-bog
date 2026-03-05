@@ -13,9 +13,8 @@ import {
   Printer,
 } from "lucide-react";
 import { getFingerprint } from "@/lib/fingerprint";
-import { BadgePreview } from "@/components/badge-preview";
 
-type AppState = "camera" | "generating" | "result";
+type AppState = "form" | "camera" | "generating" | "result";
 
 interface AvatarResult {
   id: string;
@@ -31,8 +30,7 @@ export default function HomePage() {
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [state, setState] = useState<AppState>("camera");
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [state, setState] = useState<AppState>("form");
   const [result, setResult] = useState<AvatarResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
@@ -41,15 +39,17 @@ export default function HomePage() {
   const [showGallery, setShowGallery] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  // Form fields (filled during generation)
-  const [firstName, setFirstName] = useState("");
-  const [role, setRole] = useState("");
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
-  // Parallel state: AI generation runs while user fills form
+  // Generation state
   const [aiResult, setAiResult] = useState<{ id: string; avatarUrl: string } | null>(null);
   const [aiDone, setAiDone] = useState(false);
   const [badgeGenerating, setBadgeGenerating] = useState(false);
+
+  // Editable badge fields
+  const [firstName, setFirstName] = useState("");
+  const [role, setRole] = useState("");
+  const badgeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchGallery = useCallback(async () => {
     try {
@@ -76,18 +76,6 @@ export default function HomePage() {
     getFingerprint().then(setFingerprint).catch(console.error);
   }, []);
 
-  // Restore pending avatar from localStorage (survives page refresh)
-  useEffect(() => {
-    try {
-      const pending = localStorage.getItem("pendingAvatar");
-      if (pending) {
-        const ai = JSON.parse(pending) as { id: string; avatarUrl: string };
-        setAiResult(ai);
-        setAiDone(true);
-        setState("generating"); // Show form to complete badge
-      }
-    } catch {}
-  }, []);
 
   const saveToGallery = useCallback((avatar: AvatarResult) => {
     setGallery((prev) => [avatar, ...prev]);
@@ -135,13 +123,12 @@ export default function HomePage() {
   // Start AI generation immediately after capture
   const abortRef = useRef<AbortController | null>(null);
   const startGeneration = useCallback(
-    async (blob: Blob, dataUrl: string) => {
+    async (blob: Blob) => {
       // Abort any in-flight generation
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
-      setCapturedImage(dataUrl);
       setAiResult(null);
       setAiDone(false);
       setError(null);
@@ -173,58 +160,112 @@ export default function HomePage() {
         const ai = { id: data.id, avatarUrl: data.avatarUrl };
         setAiResult(ai);
         setAiDone(true);
-        // Persist so badge can be completed after refresh
-        localStorage.setItem("pendingAvatar", JSON.stringify(ai));
+
+        // Auto-generate badge immediately with user's name/role
+        setBadgeGenerating(true);
+        try {
+          const badgeRes = await fetch("/api/generate-badge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              avatarId: ai.id,
+              firstName: firstName.trim() || "ATTENDEE",
+              role: role.trim() || "CREATOR",
+            }),
+          });
+
+          if (!badgeRes.ok) {
+            const badgeData = await badgeRes.json();
+            throw new Error(badgeData.error || "Badge generation failed");
+          }
+
+          const badgeData = await badgeRes.json();
+          const avatarResult: AvatarResult = {
+            id: ai.id,
+            originalUrl: "",
+            avatarUrl: ai.avatarUrl,
+            badgeUrl: badgeData.badgeUrl,
+            createdAt: Date.now(),
+          };
+
+          setResult(avatarResult);
+          saveToGallery(avatarResult);
+          setState("result");
+        } catch (badgeErr) {
+          console.error("Badge generation error:", badgeErr);
+          // Still show result with just the avatar
+          const avatarResult: AvatarResult = {
+            id: ai.id,
+            originalUrl: "",
+            avatarUrl: ai.avatarUrl,
+            createdAt: Date.now(),
+          };
+          setResult(avatarResult);
+          saveToGallery(avatarResult);
+          setState("result");
+        } finally {
+          setBadgeGenerating(false);
+        }
       } catch (err) {
         console.error("Generation error:", err);
         setError(err instanceof Error ? err.message : "Something went wrong");
         setState("camera");
       }
     },
-    [fingerprint],
+    [fingerprint, firstName, role, saveToGallery],
   );
 
-  // Generate badge once AI is done and user has filled firstName
-  const generateBadge = useCallback(async () => {
-    if (!aiResult || !firstName.trim()) return;
-
-    setBadgeGenerating(true);
-    try {
-      const response = await fetch("/api/generate-badge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          avatarId: aiResult.id,
-          firstName: firstName.trim(),
-          role: role.trim() || "CREATOR",
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Badge generation failed");
+  // Auto-save: regenerate badge when name/role changes
+  const updateBadge = useCallback(
+    async (name: string, userRole: string) => {
+      if (!result?.id) return;
+      setBadgeGenerating(true);
+      try {
+        const res = await fetch("/api/generate-badge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            avatarId: result.id,
+            firstName: name.trim() || "ATTENDEE",
+            role: userRole.trim() || "CREATOR",
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setResult((prev) =>
+          prev ? { ...prev, badgeUrl: data.badgeUrl } : prev,
+        );
+        setGallery((prev) =>
+          prev.map((item) =>
+            item.id === result.id ? { ...item, badgeUrl: data.badgeUrl } : item,
+          ),
+        );
+      } catch (err) {
+        console.error("Badge update error:", err);
+      } finally {
+        setBadgeGenerating(false);
       }
+    },
+    [result?.id],
+  );
 
-      const data = await response.json();
-      const avatarResult: AvatarResult = {
-        id: aiResult.id,
-        originalUrl: "",
-        avatarUrl: aiResult.avatarUrl,
-        badgeUrl: data.badgeUrl,
-        createdAt: Date.now(),
-      };
+  const handleNameChange = useCallback(
+    (value: string) => {
+      setFirstName(value);
+      if (badgeSaveTimer.current) clearTimeout(badgeSaveTimer.current);
+      badgeSaveTimer.current = setTimeout(() => updateBadge(value, role), 800);
+    },
+    [updateBadge, role],
+  );
 
-      setResult(avatarResult);
-      saveToGallery(avatarResult);
-      setState("result");
-      localStorage.removeItem("pendingAvatar");
-    } catch (err) {
-      console.error("Badge generation error:", err);
-      setError(err instanceof Error ? err.message : "Badge generation failed");
-    } finally {
-      setBadgeGenerating(false);
-    }
-  }, [aiResult, firstName, role, saveToGallery]);
+  const handleRoleChange = useCallback(
+    (value: string) => {
+      setRole(value);
+      if (badgeSaveTimer.current) clearTimeout(badgeSaveTimer.current);
+      badgeSaveTimer.current = setTimeout(() => updateBadge(firstName, value), 800);
+    },
+    [updateBadge, firstName],
+  );
 
   const doCapture = useCallback(() => {
     const video = videoRef.current;
@@ -246,8 +287,7 @@ export default function HomePage() {
     canvas.toBlob(
       (blob) => {
         if (blob) {
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-          startGeneration(blob, dataUrl);
+          startGeneration(blob);
         }
       },
       "image/jpeg",
@@ -287,13 +327,7 @@ export default function HomePage() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        startGeneration(file, dataUrl);
-      };
-      reader.readAsDataURL(file);
-
+      startGeneration(file);
       e.target.value = "";
     },
     [startGeneration],
@@ -304,15 +338,15 @@ export default function HomePage() {
   }, []);
 
   const retake = useCallback(() => {
-    setCapturedImage(null);
     setResult(null);
     setError(null);
     setCameraReady(false);
-    setFirstName("");
-    setRole("");
     setAiResult(null);
     setAiDone(false);
-    setState("camera");
+    setFirstName("");
+    setRole("");
+    if (badgeSaveTimer.current) clearTimeout(badgeSaveTimer.current);
+    setState("form");
   }, []);
 
   const downloadBadge = useCallback(async () => {
@@ -509,6 +543,49 @@ export default function HomePage() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center relative overflow-y-auto">
+        {/* Form: name + role */}
+        {state === "form" && (
+          <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
+            <div className="w-full max-w-md space-y-6">
+              <div className="text-center">
+                <h2 className="text-sm uppercase tracking-widest font-bold">Create Your Badge</h2>
+                <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                  Enter your details to get started
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Your first name"
+                    autoFocus
+                    className="w-full h-12 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    Role / Company
+                  </label>
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="e.g. Designer, Acme Inc."
+                    className="w-full h-12 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Camera view */}
         {state === "camera" && (
           <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -545,73 +622,23 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Generating state: AI runs in background + user fills form */}
+        {/* Generating state: auto-generating avatar + badge */}
         {state === "generating" && (
-          <div className="w-full max-w-md mx-auto p-4 fade-in space-y-4">
-            {/* Status indicator */}
-            <div className="flex items-center gap-3 p-3 border border-accent/20 bg-muted">
-              {!aiDone ? (
-                <>
-                  <Loader2 className="size-5 text-accent animate-spin shrink-0" />
-                  <div>
-                    <p className="text-xs uppercase tracking-wider font-bold">Generating avatar...</p>
-                    <p className="text-[10px] text-muted-foreground">Fill in your details while we work</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="size-5 bg-accent-green flex items-center justify-center shrink-0">
-                    <Zap className="size-3 text-background" />
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wider font-bold text-accent-green">Avatar ready!</p>
-                    <p className="text-[10px] text-muted-foreground">Fill your name to create badge</p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Form fields */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Your first name"
-                  autoFocus
-                  className="w-full h-10 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                  Role / Company
-                </label>
-                <input
-                  type="text"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  placeholder="e.g. Designer, Acme Inc."
-                  className="w-full h-10 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
-                />
+          <div className="flex-1 flex flex-col items-center justify-center w-full p-4 fade-in">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="size-10 text-accent animate-spin" />
+              <div className="text-center">
+                <p className="text-xs uppercase tracking-wider font-bold">
+                  {!aiDone ? "Generating avatar..." : "Creating badge..."}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  This will take a few seconds
+                </p>
               </div>
             </div>
-
-            {/* Live badge preview */}
-            <BadgePreview
-              avatarUrl={aiDone && aiResult ? aiResult.avatarUrl : capturedImage}
-              firstName={firstName || "YOUR NAME"}
-              role={role || "CREATOR"}
-              avatarId={aiResult?.id}
-              className="w-full"
-            />
 
             {error && (
-              <div className="p-3 border border-red-500/30 bg-red-500/10 text-red-400 text-xs text-center">
+              <div className="mt-4 p-3 border border-red-500/30 bg-red-500/10 text-red-400 text-xs text-center">
                 {error}
               </div>
             )}
@@ -620,30 +647,68 @@ export default function HomePage() {
 
         {/* Result */}
         {state === "result" && result && (
-          <div className="w-full max-w-md mx-auto p-4 fade-in">
-            {result.badgeUrl ? (
-              <div className="border-2 border-accent/30 overflow-hidden">
-                <img
-                  src={result.badgeUrl}
-                  alt="Code Brew Badge"
-                  className="w-full h-auto"
-                />
-              </div>
-            ) : (
-              <div className="relative aspect-square border-2 border-accent/30 bg-muted flex items-center justify-center">
-                <img
-                  src={result.avatarUrl}
-                  alt="Code Brew Badge"
-                  className="w-full h-full object-contain p-4"
-                />
-              </div>
-            )}
+          <div className="w-full max-w-md mx-auto p-4 fade-in space-y-3">
+            <div className="relative">
+              {result.badgeUrl ? (
+                <div className="border-2 border-accent/30 overflow-hidden">
+                  <img
+                    src={result.badgeUrl}
+                    alt="Code Brew Badge"
+                    className="w-full h-auto"
+                  />
+                </div>
+              ) : (
+                <div className="relative aspect-square border-2 border-accent/30 bg-muted flex items-center justify-center">
+                  <img
+                    src={result.avatarUrl}
+                    alt="Code Brew Badge"
+                    className="w-full h-full object-contain p-4"
+                  />
+                </div>
+              )}
+              {badgeGenerating && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  <Loader2 className="size-6 text-accent animate-spin" />
+                </div>
+              )}
+            </div>
+
+            {/* Editable name & role */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Your name"
+                className="flex-1 h-9 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
+              />
+              <input
+                type="text"
+                value={role}
+                onChange={(e) => handleRoleChange(e.target.value)}
+                placeholder="Role"
+                className="flex-1 h-9 px-3 bg-muted border border-accent/20 text-foreground text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent"
+              />
+            </div>
           </div>
         )}
       </div>
 
       {/* Bottom controls */}
       <div className="p-4 pb-8 border-t border-accent/20 z-10 shrink-0">
+        {state === "form" && (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => setState("camera")}
+              disabled={!firstName.trim()}
+              className="w-full max-w-md h-12 bg-accent text-background flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-bold hover:bg-accent/90 active:bg-accent/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Camera className="size-4" strokeWidth={2} />
+              Take Photo
+            </button>
+          </div>
+        )}
+
         {state === "camera" && (
           <div className="flex items-center justify-center gap-8">
             <button
@@ -671,36 +736,13 @@ export default function HomePage() {
         )}
 
         {state === "generating" && (
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center">
             <button
               onClick={retake}
-              className="flex-1 max-w-[120px] h-12 border border-accent/30 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-muted-foreground hover:text-accent hover:border-accent transition-colors"
+              className="h-12 px-6 border border-accent/30 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-muted-foreground hover:text-accent hover:border-accent transition-colors"
             >
               <Camera className="size-4" strokeWidth={1.5} />
-              Retake
-            </button>
-
-            <button
-              onClick={generateBadge}
-              disabled={!aiDone || !firstName.trim() || badgeGenerating}
-              className="flex-1 max-w-[200px] h-12 bg-accent-green text-background flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-bold hover:bg-accent-green/90 active:bg-accent-green/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {badgeGenerating ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Creating Badge...
-                </>
-              ) : !aiDone ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Zap className="size-4" strokeWidth={2} />
-                  Create Badge
-                </>
-              )}
+              Cancel
             </button>
           </div>
         )}
