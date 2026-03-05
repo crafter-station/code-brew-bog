@@ -12,6 +12,8 @@
     "@fal-ai/client": "^1.9.4",
     "@fingerprintjs/fingerprintjs": "^5.1.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.3",
     "@vercel/blob": "^2.3.0",
     "drizzle-orm": "^0.45.1",
     "geist": "^1.7.0",
