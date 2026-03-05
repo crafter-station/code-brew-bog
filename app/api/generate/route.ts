@@ -6,11 +6,30 @@ import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { avatars } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { ratelimit } from "@/lib/ratelimit";
 
 const MAX_GENERATIONS = 3;
 const isDev = process.env.NODE_ENV === "development";
 
 export async function POST(request: NextRequest) {
+  // Rate limit by IP
+  const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
+  const { success, limit, remaining, reset } = await ratelimit.limit(ip);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+          "X-RateLimit-Reset": reset.toString(),
+        },
+      },
+    );
+  }
+
   const falKey = process.env.FAL_KEY || process.env.FAL_API_KEY;
   console.log("[ai-avatar] FAL key present:", !!falKey, "length:", falKey?.length);
   fal.config({ credentials: falKey });
