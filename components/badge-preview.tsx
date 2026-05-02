@@ -150,15 +150,17 @@ export function BadgePreview({
           {/* Divider */}
           <line x1="60" y1="1360" x2="1020" y2="1360" stroke={COLORS.black} strokeWidth="2" />
 
-          {/* CODE BREW brand */}
-          <text x="60" y="1450" fontSize="72" fontWeight="700" fontFamily="'Geist Mono', monospace" letterSpacing="0.26em">
-            <tspan fill={COLORS.primary}>{"<"}</tspan>
-            <tspan fill={COLORS.black}>CODE</tspan>
-          </text>
-          <text x="160" y="1530" fontSize="72" fontWeight="700" fontFamily="'Geist Mono', monospace" letterSpacing="0.26em">
-            <tspan fill={COLORS.black}>BREW</tspan>
-            <tspan fill={COLORS.primary}>{">"}</tspan>
-          </text>
+          {/* v0 brand */}
+          <g transform="translate(60, 1400) scale(1.6)">
+            <path
+              d="M96 86.0625V24H120V103.125C120 112.445 112.445 120 103.125 120C98.6751 120 94.2826 118.284 91.125 115.127L0 24H33.9375L96 86.0625Z"
+              fill={COLORS.black}
+            />
+            <path
+              d="M218.25 0C236.89 0 252 15.1104 252 33.75V96H228V41.0625L173.062 96H228V120H165.75C147.11 120 132 104.89 132 86.25V24H156V79.125L211.125 24H156V0H218.25Z"
+              fill={COLORS.black}
+            />
+          </g>
 
           {/* QR Code */}
           {qrCodeDataUrl && (
