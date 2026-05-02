@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, Share2, Zap, Printer } from "lucide-react";
+import { Download, Share2, Printer } from "lucide-react";
+import Image from "next/image";
 import { useCallback } from "react";
 
 interface BadgeClientProps {
@@ -17,7 +18,7 @@ export function BadgeClient({ imageUrl, name, id, hasBadge }: BadgeClientProps) 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `code-brew-${id}.png`;
+    a.download = `v0-${id}.png`;
     a.click();
     URL.revokeObjectURL(url);
   }, [imageUrl, id]);
@@ -26,7 +27,7 @@ export function BadgeClient({ imageUrl, name, id, hasBadge }: BadgeClientProps) 
     const shareUrl = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${name}'s Code Brew Badge`, url: shareUrl });
+        await navigator.share({ title: `${name}'s v0 Badge`, url: shareUrl });
       } catch {
         // cancelled
       }
@@ -58,10 +59,13 @@ export function BadgeClient({ imageUrl, name, id, hasBadge }: BadgeClientProps) 
     <div className="min-h-dvh flex flex-col bg-background">
       <header className="flex items-center justify-center px-4 py-3 border-b border-accent/20">
         <div className="flex items-center gap-2">
-          <Zap className="size-4 text-accent" strokeWidth={2} />
-          <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
-            Code Brew
-          </span>
+          <Image
+            src="/v0-logo-dark.svg"
+            alt="v0"
+            width={26}
+            height={12}
+            priority
+          />
         </div>
       </header>
 
@@ -73,13 +77,13 @@ export function BadgeClient({ imageUrl, name, id, hasBadge }: BadgeClientProps) 
           >
             <img
               src={imageUrl}
-              alt={`${name}'s Code Brew Badge`}
+              alt={`${name}'s v0 Badge`}
               className={`w-full ${hasBadge ? "h-auto" : "h-full object-contain p-4"}`}
             />
           </div>
 
           <p className="text-center text-xs uppercase tracking-wider text-muted-foreground mt-4">
-            {name}&apos;s Code Brew Badge
+            {name}&apos;s v0 Badge
           </p>
         </div>
       </div>
@@ -115,7 +119,7 @@ export function BadgeClient({ imageUrl, name, id, hasBadge }: BadgeClientProps) 
           href="/"
           className="block text-center text-[10px] uppercase tracking-wider text-muted-foreground mt-4 hover:text-accent transition-colors"
         >
-          Create your own Code Brew Badge →
+          Create your own v0 Badge →
         </a>
       </div>
     </div>
