@@ -22,6 +22,32 @@ async function getFonts() {
   return fontCache;
 }
 
+const V0_LOGO = { width: 258, height: 123, top: 1348, left: 144, src: "v0-logo-light.svg" };
+const CS_LOGO = { width: 404, height: 107, top: 1358, left: 592, src: "cs-brand-black.png" };
+const Z2A_LOGO = { width: 452, height: 71, top: 30, left: 318, src: "zero-to-agent.png" };
+const Z2A_BG = { enabled: false, paddingX: 15, paddingY: 12, color: "#0a0a0a" };
+const QR = { size: 120, top: 1090, left: 900 };
+
+const logoBufferCache = new Map<string, Buffer>();
+
+async function getLogoBuffer(spec: { width: number; height: number; src: string }) {
+  const key = `${spec.src}:${spec.width}x${spec.height}`;
+  const cached = logoBufferCache.get(key);
+  if (cached) return cached;
+
+  const filePath = path.join(process.cwd(), "public", spec.src);
+  const file = await fs.readFile(filePath);
+  const buf = await sharp(file)
+    .resize(spec.width, spec.height, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+  logoBufferCache.set(key, buf);
+  return buf;
+}
+
 const COLORS = {
   background: "#f5f5f5",
   black: "#0a0a0a",
@@ -122,7 +148,7 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
       <div
         style={{
           position: "absolute",
-          top: 60,
+          top: 100,
           left: 60,
           width: PHOTO_SIZE,
           height: PHOTO_SIZE,
@@ -131,30 +157,30 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
       />
 
       {/* Corner accents - top left */}
-      <div style={{ position: "absolute", top: 60, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 60, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 100, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 100, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
 
       {/* Corner accents - top right */}
-      <div style={{ position: "absolute", top: 60, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 60, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 100, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 100, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
 
       {/* Corner accents - bottom left of photo */}
-      <div style={{ position: "absolute", top: 980, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 1012, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 1020, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 1052, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
 
       {/* Corner accents - bottom right of photo */}
-      <div style={{ position: "absolute", top: 980, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 1012, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 1020, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
+      <div style={{ position: "absolute", top: 1052, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
 
       {/* L-Bracket frame element */}
-      <div style={{ position: "absolute", top: 1020, left: 60, width: 16, height: 240, backgroundColor: COLORS.black }} />
-      <div style={{ position: "absolute", top: 1244, left: 60, width: 140, height: 16, backgroundColor: COLORS.black }} />
+      <div style={{ position: "absolute", top: 1080, left: 60, width: 16, height: 160, backgroundColor: COLORS.black }} />
+      <div style={{ position: "absolute", top: 1224, left: 60, width: 140, height: 16, backgroundColor: COLORS.black }} />
 
       {/* First Name */}
       <div
         style={{
           position: "absolute",
-          top: 1080,
+          top: 1110,
           left: 100,
           color: COLORS.black,
           fontSize: getNameFontSize(data.firstName),
@@ -170,7 +196,7 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
       <div
         style={{
           position: "absolute",
-          top: 1170,
+          top: 1190,
           left: 100,
           color: COLORS.gray,
           fontSize: 24,
@@ -181,32 +207,38 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
       </div>
 
       {/* Bottom divider line */}
-      <div style={{ position: "absolute", top: 1360, left: 60, width: 960, height: 2, backgroundColor: COLORS.black }} />
+      <div style={{ position: "absolute", top: 1290, left: 60, width: 960, height: 2, backgroundColor: COLORS.black }} />
 
-      {/* CODE BREW brand */}
+      {/* Logo placeholders (composited later via sharp) */}
+      <div style={{ position: "absolute", top: V0_LOGO.top, left: V0_LOGO.left, width: V0_LOGO.width, height: V0_LOGO.height, backgroundColor: COLORS.background }} />
+      <div style={{ position: "absolute", top: CS_LOGO.top, left: CS_LOGO.left, width: CS_LOGO.width, height: CS_LOGO.height, backgroundColor: COLORS.background }} />
+
+      {/* Dark backdrop behind Zero-to-Agent */}
+      {Z2A_BG.enabled && (
+        <div
+          style={{
+            position: "absolute",
+            top: Z2A_LOGO.top - Z2A_BG.paddingY,
+            left: Z2A_LOGO.left - Z2A_BG.paddingX,
+            width: Z2A_LOGO.width + Z2A_BG.paddingX * 2,
+            height: Z2A_LOGO.height + Z2A_BG.paddingY * 2,
+            backgroundColor: Z2A_BG.color,
+          }}
+        />
+      )}
       <div
         style={{
           position: "absolute",
-          top: 1380,
-          left: 60,
-          display: "flex",
-          flexDirection: "column",
-          gap: 0,
-          lineHeight: 1,
+          top: Z2A_LOGO.top,
+          left: Z2A_LOGO.left,
+          width: Z2A_LOGO.width,
+          height: Z2A_LOGO.height,
+          backgroundColor: Z2A_BG.enabled ? Z2A_BG.color : COLORS.background,
         }}
-      >
-        <div style={{ display: "flex", fontSize: 72, fontWeight: 700, letterSpacing: "0.26em" }}>
-          <span style={{ color: COLORS.primary }}>{`<`}</span>
-          <span style={{ color: COLORS.black }}>{`CODE`}</span>
-        </div>
-        <div style={{ display: "flex", fontSize: 72, fontWeight: 700, letterSpacing: "0.26em", paddingLeft: 100 }}>
-          <span style={{ color: COLORS.black }}>{`BREW`}</span>
-          <span style={{ color: COLORS.primary }}>{`>`}</span>
-        </div>
-      </div>
+      />
 
       {/* QR Code placeholder */}
-      <div style={{ position: "absolute", top: 1420, left: 900, width: 120, height: 120, backgroundColor: COLORS.background }} />
+      <div style={{ position: "absolute", top: QR.top, left: QR.left, width: QR.size, height: QR.size, backgroundColor: COLORS.background }} />
     </div>
   );
 }
@@ -233,24 +265,23 @@ export async function generateBadge(
     .toBuffer();
 
   // Generate QR code
-  let domain = "ai-camera.vercel.app";
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    domain = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  } else if (process.env.VERCEL_BRANCH_URL) {
-    domain = process.env.VERCEL_BRANCH_URL;
-  }
-  const profileUrl = `https://${domain}/b/${avatarId}`;
+  const qrTargetUrl = "https://crafters.chat/";
 
-  const qrCodeBuffer = await QRCode.toBuffer(profileUrl, {
+  const qrCodeBuffer = await QRCode.toBuffer(qrTargetUrl, {
     errorCorrectionLevel: "M",
     type: "png",
-    width: 120,
+    width: QR.size,
     margin: 0,
     color: { dark: "#0a0a0a", light: "#f5f5f5" },
   });
 
-  // Get fonts
+  // Get fonts and logos
   const fonts = await getFonts();
+  const [v0Buffer, csBuffer, z2aBuffer] = await Promise.all([
+    getLogoBuffer(V0_LOGO),
+    getLogoBuffer(CS_LOGO),
+    getLogoBuffer(Z2A_LOGO),
+  ]);
 
   // Render badge template with satori
   const badgeSvg = await satori(
@@ -265,11 +296,14 @@ export async function generateBadge(
     }
   );
 
-  // Composite badge with photo and QR code
+  // Composite badge with photo, logos, and QR code
   const badgeBuffer = await sharp(Buffer.from(badgeSvg))
     .composite([
-      { input: processedPhoto, top: 60, left: 60 },
-      { input: qrCodeBuffer, top: 1420, left: 900 },
+      { input: processedPhoto, top: 100, left: 60 },
+      { input: v0Buffer, top: V0_LOGO.top, left: V0_LOGO.left },
+      { input: csBuffer, top: CS_LOGO.top, left: CS_LOGO.left },
+      { input: z2aBuffer, top: Z2A_LOGO.top, left: Z2A_LOGO.left },
+      { input: qrCodeBuffer, top: QR.top, left: QR.left },
     ])
     .png({ quality: 90 })
     .toBuffer();
