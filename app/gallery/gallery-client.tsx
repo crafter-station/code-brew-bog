@@ -97,7 +97,7 @@ export function GalleryClient({ initialGallery }: GalleryClientProps) {
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `code-brew-${item.id}.png`;
+    a.download = `v0-${item.id}.png`;
     a.click();
     URL.revokeObjectURL(blobUrl);
   }, []);
