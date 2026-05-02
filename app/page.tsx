@@ -7,12 +7,12 @@ import {
   Download,
   Loader2,
   ImageIcon,
-  Zap,
   Upload,
   Share2,
   Printer,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getFingerprint } from "@/lib/fingerprint";
 
 type AppState = "form" | "camera" | "generating" | "result";
@@ -356,7 +356,7 @@ export default function HomePage() {
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `code-brew-${result.id}.png`;
+    a.download = `v0-${result.id}.png`;
     a.click();
     URL.revokeObjectURL(blobUrl);
   }, [result]);
@@ -367,7 +367,7 @@ export default function HomePage() {
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: "My Code Brew Badge", url: shareUrl });
+        await navigator.share({ title: "My v0 Badge", url: shareUrl });
       } catch {
         // cancelled
       }
@@ -427,10 +427,13 @@ export default function HomePage() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-accent/20 z-10">
         <div className="flex items-center gap-2">
-          <Zap className="size-4 text-accent" strokeWidth={2} />
-          <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
-            Code Brew
-          </span>
+          <Image
+            src="/v0-logo-dark.svg"
+            alt="v0"
+            width={26}
+            height={12}
+            priority
+          />
         </div>
         <Link
           href="/gallery"
@@ -558,7 +561,7 @@ export default function HomePage() {
                 <div className="border-2 border-accent/30 overflow-hidden">
                   <img
                     src={result.badgeUrl}
-                    alt="Code Brew Badge"
+                    alt="v0 Badge"
                     className="w-full h-auto"
                   />
                 </div>
@@ -566,7 +569,7 @@ export default function HomePage() {
                 <div className="relative aspect-square border-2 border-accent/30 bg-muted flex items-center justify-center">
                   <img
                     src={result.avatarUrl}
-                    alt="Code Brew Badge"
+                    alt="v0 Badge"
                     className="w-full h-full object-contain p-4"
                   />
                 </div>
