@@ -20,19 +20,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const name = avatar.firstName || "Anonymous";
 
   return {
-    title: `${name}'s Code Brew Badge`,
-    description: `Check out ${name}'s Code Brew pixel-art badge`,
+    title: `${name}'s v0 Badge`,
+    description: `Check out ${name}'s v0 pixel-art badge`,
     openGraph: {
-      title: `${name}'s Code Brew Badge`,
-      description: `Check out ${name}'s Code Brew pixel-art badge`,
+      title: `${name}'s v0 Badge`,
+      description: `Check out ${name}'s v0 pixel-art badge`,
       images: avatar.badgeUrl
         ? [{ url: avatar.badgeUrl, width: 1080, height: 1600 }]
         : [{ url: avatar.avatarUrl, width: 684, height: 577 }],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${name}'s Code Brew Badge`,
-      description: `Check out ${name}'s Code Brew pixel-art badge`,
+      title: `${name}'s v0 Badge`,
+      description: `Check out ${name}'s v0 pixel-art badge`,
       images: avatar.badgeUrl ? [avatar.badgeUrl] : [avatar.avatarUrl],
     },
   };
