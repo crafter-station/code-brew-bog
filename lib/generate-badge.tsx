@@ -22,72 +22,81 @@ async function getFonts() {
   return fontCache;
 }
 
-const V0_LOGO = { width: 258, height: 123, top: 1348, left: 144, src: "v0-logo-light.svg" };
-const CS_LOGO = { width: 404, height: 107, top: 1358, left: 592, src: "cs-brand-black.png" };
-const Z2A_LOGO = { width: 452, height: 71, top: 30, left: 318, src: "zero-to-agent.png" };
-const Z2A_BG = { enabled: false, paddingX: 15, paddingY: 12, color: "#0a0a0a" };
-const QR = { size: 120, top: 1090, left: 900 };
-
-const logoBufferCache = new Map<string, Buffer>();
-
-async function getLogoBuffer(spec: { width: number; height: number; src: string }) {
-  const key = `${spec.src}:${spec.width}x${spec.height}`;
-  const cached = logoBufferCache.get(key);
-  if (cached) return cached;
-
-  const filePath = path.join(process.cwd(), "public", spec.src);
-  const file = await fs.readFile(filePath);
-  const buf = await sharp(file)
-    .resize(spec.width, spec.height, {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
-  logoBufferCache.set(key, buf);
-  return buf;
-}
-
 const COLORS = {
-  background: "#f5f5f5",
-  black: "#0a0a0a",
-  primary: "#f03d44",
-  gray: "#666666",
-  photoPlaceholder: "#dfdfdf",
+  background: "#fafafa",
+  ink: "#22242f",
+  paper: "#fafafa",
+  accent: "#e7acff",
+  accentInk: "#7a3aa8",
+  dim: "rgba(34, 36, 47, 0.62)",
+  muted: "rgba(34, 36, 47, 0.4)",
+  border: "rgba(34, 36, 47, 0.16)",
+  photoTile: "#ececec",
 };
 
 const BADGE_WIDTH = 1080;
 const BADGE_HEIGHT = 1600;
-const PHOTO_SIZE = 960;
+
+const GTM_LOGO = {
+  width: 640,
+  height: Math.round((640 * 157) / 956),
+  top: 80,
+  left: (BADGE_WIDTH - 640) / 2,
+  src: "the-gtm-hackathon.svg",
+};
+
+const PHOTO_SIZE = 860;
+const PHOTO_TOP = 230;
+const PHOTO_LEFT = (BADGE_WIDTH - PHOTO_SIZE) / 2;
+const PHOTO_BOTTOM = PHOTO_TOP + PHOTO_SIZE;
+
+const NAME_TOP = PHOTO_BOTTOM + 40;
+const ROLE_TOP = NAME_TOP + 90;
+const BRACKET_TOP = NAME_TOP - 20;
+const BRACKET_BOTTOM = ROLE_TOP + 60;
+const DIVIDER_TOP = BRACKET_BOTTOM + 30;
+
+const CS_LOGO = {
+  width: 360,
+  height: Math.round((360 * 1940) / 7347),
+  top: 1370,
+  left: 100,
+  src: "cs-brand-black.png",
+};
+
+const QR = {
+  size: 130,
+  top: 1340,
+  left: 850,
+};
+
+const TAGLINE = "real challenges, real results_";
 
 interface BadgeData {
   firstName: string;
   role: string;
 }
 
-function SpaceOdysseyBackground() {
-  const radialLines = [];
+function StarField() {
   const centerX = BADGE_WIDTH / 2;
   const centerY = BADGE_HEIGHT / 2;
 
-  for (let i = 0; i < 24; i++) {
-    radialLines.push(
-      <div
-        key={`radial-${i}`}
-        style={{
-          position: "absolute",
-          left: centerX,
-          top: centerY,
-          width: 2,
-          height: 1400,
-          backgroundColor: COLORS.black,
-          transformOrigin: "top center",
-          transform: `rotate(${i * 15}deg)`,
-          opacity: 0.08,
-        }}
-      />
-    );
-  }
+  const radialLines = Array.from({ length: 24 }).map((_, i) => (
+    <div
+      key={`radial-${i}`}
+      style={{
+        position: "absolute",
+        left: centerX,
+        top: centerY,
+        width: 2,
+        height: 1400,
+        backgroundColor: COLORS.ink,
+        transformOrigin: "top center",
+        transform: `rotate(${i * 15}deg)`,
+        opacity: 0.05,
+      }}
+    />
+  ));
 
   const octagons = [200, 400, 600, 800, 1000, 1200].map((size, idx) => (
     <div
@@ -98,7 +107,7 @@ function SpaceOdysseyBackground() {
         top: centerY - size,
         width: size * 2,
         height: size * 2,
-        border: "1.5px solid rgba(10, 10, 10, 0.08)",
+        border: "1.5px solid rgba(34, 36, 47, 0.06)",
         borderRadius: "15%",
         transform: "rotate(22.5deg)",
       }}
@@ -123,11 +132,34 @@ function SpaceOdysseyBackground() {
   );
 }
 
+function Cross({ top, left }: { top: number; left: number }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top,
+        left,
+        width: 24,
+        height: 24,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: COLORS.accent,
+        fontSize: 36,
+        fontFamily: "Geist Mono",
+        fontWeight: 400,
+      }}
+    >
+      +
+    </div>
+  );
+}
+
 function BadgeTemplate({ data }: { data: BadgeData }) {
   const getNameFontSize = (name: string) => {
-    if (name.length > 12) return 52;
-    if (name.length > 8) return 64;
-    return 72;
+    if (name.length > 12) return 56;
+    if (name.length > 8) return 68;
+    return 76;
   };
 
   return (
@@ -142,47 +174,108 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
         fontFamily: "Geist Mono",
       }}
     >
-      <SpaceOdysseyBackground />
+      <StarField />
 
-      {/* Photo area placeholder */}
+      {/* Border crosses (LatamBuilds + motif) */}
+      <Cross top={30} left={30} />
+      <Cross top={30} left={BADGE_WIDTH - 54} />
+      <Cross top={BADGE_HEIGHT - 54} left={30} />
+      <Cross top={BADGE_HEIGHT - 54} left={BADGE_WIDTH - 54} />
+
+      {/* Top hairline + axis dot */}
       <div
         style={{
           position: "absolute",
-          top: 100,
-          left: 60,
-          width: PHOTO_SIZE,
-          height: PHOTO_SIZE,
-          backgroundColor: COLORS.photoPlaceholder,
+          top: 60,
+          left: 80,
+          width: BADGE_WIDTH - 160,
+          height: 1,
+          backgroundColor: COLORS.border,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: 56,
+          left: BADGE_WIDTH / 2 - 4,
+          width: 8,
+          height: 8,
+          backgroundColor: COLORS.accent,
+          transform: "rotate(45deg)",
         }}
       />
 
-      {/* Corner accents - top left */}
-      <div style={{ position: "absolute", top: 100, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 100, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
-
-      {/* Corner accents - top right */}
-      <div style={{ position: "absolute", top: 100, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 100, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
-
-      {/* Corner accents - bottom left of photo */}
-      <div style={{ position: "absolute", top: 1020, left: 60, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 1052, left: 60, width: 40, height: 8, backgroundColor: COLORS.primary }} />
-
-      {/* Corner accents - bottom right of photo */}
-      <div style={{ position: "absolute", top: 1020, left: 1012, width: 8, height: 40, backgroundColor: COLORS.primary }} />
-      <div style={{ position: "absolute", top: 1052, left: 980, width: 40, height: 8, backgroundColor: COLORS.primary }} />
-
-      {/* L-Bracket frame element */}
-      <div style={{ position: "absolute", top: 1080, left: 60, width: 16, height: 160, backgroundColor: COLORS.black }} />
-      <div style={{ position: "absolute", top: 1224, left: 60, width: 140, height: 16, backgroundColor: COLORS.black }} />
-
-      {/* First Name */}
+      {/* GTM Hackathon wordmark backdrop (composited later) */}
       <div
         style={{
           position: "absolute",
-          top: 1110,
+          top: GTM_LOGO.top,
+          left: GTM_LOGO.left,
+          width: GTM_LOGO.width,
+          height: GTM_LOGO.height,
+          backgroundColor: COLORS.background,
+        }}
+      />
+
+      {/* "LATAMBUILDS_" small caps under wordmark */}
+      <div
+        style={{
+          position: "absolute",
+          top: GTM_LOGO.top + GTM_LOGO.height + 14,
+          left: 0,
+          width: BADGE_WIDTH,
+          color: COLORS.accentInk,
+          fontSize: 18,
+          fontWeight: 700,
+          letterSpacing: "0.4em",
+          textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        LATAMBUILDS_
+      </div>
+
+      {/* Photo tile */}
+      <div
+        style={{
+          position: "absolute",
+          top: PHOTO_TOP,
+          left: PHOTO_LEFT,
+          width: PHOTO_SIZE,
+          height: PHOTO_SIZE,
+          backgroundColor: COLORS.photoTile,
+        }}
+      />
+
+      {/* Lavender corner brackets — top left */}
+      <div style={{ position: "absolute", top: PHOTO_TOP, left: PHOTO_LEFT, width: 8, height: 48, backgroundColor: COLORS.accent }} />
+      <div style={{ position: "absolute", top: PHOTO_TOP, left: PHOTO_LEFT, width: 48, height: 8, backgroundColor: COLORS.accent }} />
+
+      {/* top right */}
+      <div style={{ position: "absolute", top: PHOTO_TOP, left: PHOTO_LEFT + PHOTO_SIZE - 8, width: 8, height: 48, backgroundColor: COLORS.accent }} />
+      <div style={{ position: "absolute", top: PHOTO_TOP, left: PHOTO_LEFT + PHOTO_SIZE - 48, width: 48, height: 8, backgroundColor: COLORS.accent }} />
+
+      {/* bottom left */}
+      <div style={{ position: "absolute", top: PHOTO_BOTTOM - 48, left: PHOTO_LEFT, width: 8, height: 48, backgroundColor: COLORS.accent }} />
+      <div style={{ position: "absolute", top: PHOTO_BOTTOM - 8, left: PHOTO_LEFT, width: 48, height: 8, backgroundColor: COLORS.accent }} />
+
+      {/* bottom right */}
+      <div style={{ position: "absolute", top: PHOTO_BOTTOM - 48, left: PHOTO_LEFT + PHOTO_SIZE - 8, width: 8, height: 48, backgroundColor: COLORS.accent }} />
+      <div style={{ position: "absolute", top: PHOTO_BOTTOM - 8, left: PHOTO_LEFT + PHOTO_SIZE - 48, width: 48, height: 8, backgroundColor: COLORS.accent }} />
+
+      {/* L-bracket frame for name area */}
+      <div style={{ position: "absolute", top: BRACKET_TOP, left: 60, width: 16, height: BRACKET_BOTTOM - BRACKET_TOP, backgroundColor: COLORS.ink }} />
+      <div style={{ position: "absolute", top: BRACKET_BOTTOM - 16, left: 60, width: 160, height: 16, backgroundColor: COLORS.ink }} />
+
+      {/* First name */}
+      <div
+        style={{
+          position: "absolute",
+          top: NAME_TOP,
           left: 100,
-          color: COLORS.black,
+          color: COLORS.ink,
           fontSize: getNameFontSize(data.firstName),
           fontWeight: 700,
           letterSpacing: "-0.02em",
@@ -192,55 +285,75 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
         {data.firstName}
       </div>
 
-      {/* Role with arrow */}
+      {/* Role */}
       <div
         style={{
           position: "absolute",
-          top: 1190,
+          top: ROLE_TOP,
           left: 100,
-          color: COLORS.gray,
+          color: COLORS.dim,
           fontSize: 24,
-          letterSpacing: "0.1em",
+          letterSpacing: "0.18em",
         }}
       >
         {`→ ${data.role.toUpperCase()}`}
       </div>
 
-      {/* Bottom divider line */}
-      <div style={{ position: "absolute", top: 1290, left: 60, width: 960, height: 2, backgroundColor: COLORS.black }} />
+      {/* Divider — accent on left, dim on right */}
+      <div style={{ position: "absolute", top: DIVIDER_TOP, left: 60, width: 200, height: 2, backgroundColor: COLORS.accent }} />
+      <div style={{ position: "absolute", top: DIVIDER_TOP, left: 264, width: BADGE_WIDTH - 264 - 60, height: 1, backgroundColor: COLORS.border }} />
 
-      {/* Logo placeholders (composited later via sharp) */}
-      <div style={{ position: "absolute", top: V0_LOGO.top, left: V0_LOGO.left, width: V0_LOGO.width, height: V0_LOGO.height, backgroundColor: COLORS.background }} />
+      {/* Bottom CS placeholder (composited later) */}
       <div style={{ position: "absolute", top: CS_LOGO.top, left: CS_LOGO.left, width: CS_LOGO.width, height: CS_LOGO.height, backgroundColor: COLORS.background }} />
 
-      {/* Dark backdrop behind Zero-to-Agent */}
-      {Z2A_BG.enabled && (
-        <div
-          style={{
-            position: "absolute",
-            top: Z2A_LOGO.top - Z2A_BG.paddingY,
-            left: Z2A_LOGO.left - Z2A_BG.paddingX,
-            width: Z2A_LOGO.width + Z2A_BG.paddingX * 2,
-            height: Z2A_LOGO.height + Z2A_BG.paddingY * 2,
-            backgroundColor: Z2A_BG.color,
-          }}
-        />
-      )}
+      {/* QR placeholder (no tile needed on light bg) */}
+      <div style={{ position: "absolute", top: QR.top, left: QR.left, width: QR.size, height: QR.size, backgroundColor: COLORS.background }} />
+
+      {/* Tagline footer */}
       <div
         style={{
           position: "absolute",
-          top: Z2A_LOGO.top,
-          left: Z2A_LOGO.left,
-          width: Z2A_LOGO.width,
-          height: Z2A_LOGO.height,
-          backgroundColor: Z2A_BG.enabled ? Z2A_BG.color : COLORS.background,
+          top: BADGE_HEIGHT - 70,
+          left: 0,
+          width: BADGE_WIDTH,
+          color: COLORS.muted,
+          fontSize: 18,
+          letterSpacing: "0.24em",
+          textTransform: "uppercase",
+          textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
-      />
-
-      {/* QR Code placeholder */}
-      <div style={{ position: "absolute", top: QR.top, left: QR.left, width: QR.size, height: QR.size, backgroundColor: COLORS.background }} />
+      >
+        {TAGLINE}
+      </div>
     </div>
   );
+}
+
+const logoBufferCache = new Map<string, Buffer>();
+
+async function getLogoBuffer(
+  spec: { width: number; height: number; src: string },
+  options: { invertToWhite?: boolean } = {}
+) {
+  const key = `${spec.src}:${spec.width}x${spec.height}:${options.invertToWhite ? "w" : "k"}`;
+  const cached = logoBufferCache.get(key);
+  if (cached) return cached;
+
+  const filePath = path.join(process.cwd(), "public", spec.src);
+  const file = await fs.readFile(filePath);
+  let pipeline = sharp(file).resize(spec.width, spec.height, {
+    fit: "contain",
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  });
+  if (options.invertToWhite) {
+    pipeline = pipeline.negate({ alpha: false });
+  }
+  const buf = await pipeline.png().toBuffer();
+  logoBufferCache.set(key, buf);
+  return buf;
 }
 
 export async function generateBadge(
@@ -249,7 +362,7 @@ export async function generateBadge(
   firstName: string,
   role: string
 ): Promise<string> {
-  console.log("[badge] Generating badge for", firstName);
+  console.log("[badge] Generating LatamBuilds badge for", firstName);
 
   // Fetch and process avatar into photo area
   const avatarResponse = await fetch(avatarUrl);
@@ -258,13 +371,13 @@ export async function generateBadge(
   const processedPhoto = await sharp(avatarBuffer)
     .resize(PHOTO_SIZE, PHOTO_SIZE, {
       fit: "contain",
-      background: { r: 223, g: 223, b: 223, alpha: 1 },
+      background: { r: 236, g: 236, b: 236, alpha: 1 },
     })
     .grayscale()
     .png()
     .toBuffer();
 
-  // Generate QR code
+  // Generate QR code (dark fg on paper bg so it scans)
   const qrTargetUrl = "https://crafters.chat/";
 
   const qrCodeBuffer = await QRCode.toBuffer(qrTargetUrl, {
@@ -272,15 +385,14 @@ export async function generateBadge(
     type: "png",
     width: QR.size,
     margin: 0,
-    color: { dark: "#0a0a0a", light: "#f5f5f5" },
+    color: { dark: "#22242f", light: "#fafafa" },
   });
 
   // Get fonts and logos
   const fonts = await getFonts();
-  const [v0Buffer, csBuffer, z2aBuffer] = await Promise.all([
-    getLogoBuffer(V0_LOGO),
+  const [gtmBuffer, csBuffer] = await Promise.all([
+    getLogoBuffer(GTM_LOGO),
     getLogoBuffer(CS_LOGO),
-    getLogoBuffer(Z2A_LOGO),
   ]);
 
   // Render badge template with satori
@@ -299,10 +411,9 @@ export async function generateBadge(
   // Composite badge with photo, logos, and QR code
   const badgeBuffer = await sharp(Buffer.from(badgeSvg))
     .composite([
-      { input: processedPhoto, top: 100, left: 60 },
-      { input: v0Buffer, top: V0_LOGO.top, left: V0_LOGO.left },
+      { input: processedPhoto, top: PHOTO_TOP, left: PHOTO_LEFT },
+      { input: gtmBuffer, top: GTM_LOGO.top, left: GTM_LOGO.left },
       { input: csBuffer, top: CS_LOGO.top, left: CS_LOGO.left },
-      { input: z2aBuffer, top: Z2A_LOGO.top, left: Z2A_LOGO.left },
       { input: qrCodeBuffer, top: QR.top, left: QR.left },
     ])
     .png({ quality: 90 })
