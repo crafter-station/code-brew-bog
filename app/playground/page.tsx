@@ -4,43 +4,44 @@ import { useState } from "react";
 
 const BADGE_WIDTH = 1080;
 const BADGE_HEIGHT = 1600;
-const PHOTO_SIZE = 960;
 
-// Layout — top padding added so Zero-to-Agent has room at the top
-const PHOTO_X = 60;
-const PHOTO_Y = 100;
-const PHOTO_RIGHT = PHOTO_X + PHOTO_SIZE; // 1020
-const PHOTO_BOTTOM = PHOTO_Y + PHOTO_SIZE; // 1060
+const PHOTO_SIZE = 860;
+const PHOTO_TOP = 230;
+const PHOTO_LEFT = (BADGE_WIDTH - PHOTO_SIZE) / 2;
+const PHOTO_BOTTOM = PHOTO_TOP + PHOTO_SIZE;
 
-// Compressed name/role band
-const BRACKET_TOP = PHOTO_BOTTOM + 20; // 1080
-const BRACKET_BOTTOM = 1240;            // height 160 (was 240)
-const NAME_Y = 1170;
-const ROLE_Y = 1210; // tighter gap (40 vs 70)
-const DIVIDER_Y = 1290;
+const NAME_TOP = PHOTO_BOTTOM + 40 + 70; // satori dom-baseline differs from svg text baseline; offset for preview
+const ROLE_TOP = NAME_TOP + 50;
+const BRACKET_TOP = PHOTO_BOTTOM + 20;
+const BRACKET_BOTTOM = ROLE_TOP + 30;
+const DIVIDER_TOP = BRACKET_BOTTOM + 30;
 
 const COLORS = {
-  background: "#f5f5f5",
-  black: "#0a0a0a",
-  primary: "#f03d44",
-  gray: "#666666",
-  photoPlaceholder: "#dfdfdf",
+  background: "#fafafa",
+  ink: "#22242f",
+  paper: "#fafafa",
+  accent: "#e7acff",
+  accentInk: "#7a3aa8",
+  border: "rgba(34, 36, 47, 0.16)",
+  muted: "rgba(34, 36, 47, 0.4)",
+  dim: "rgba(34, 36, 47, 0.62)",
+  photoTile: "#ececec",
 };
 
 interface LogoSpec {
-  key: "v0" | "cs" | "z2a";
+  key: "gtm" | "cs";
   label: string;
   src: string;
-  aspect: number; // width / height
+  aspect: number;
   width: number;
   x: number;
   y: number;
+  invert?: boolean;
 }
 
 const INITIAL_LOGOS: LogoSpec[] = [
-  { key: "v0", label: "v0", src: "/v0-logo-light.svg", aspect: 252 / 120, width: 258, x: 144, y: 1348 },
-  { key: "cs", label: "Crafter Station", src: "/cs-brand-black.png", aspect: 7347 / 1940, width: 404, x: 592, y: 1358 },
-  { key: "z2a", label: "Zero to Agent", src: "/zero-to-agent.png", aspect: 9120 / 1430, width: 452, x: 318, y: 30 },
+  { key: "gtm", label: "GTM Hackathon", src: "/the-gtm-hackathon.svg", aspect: 956 / 157, width: 640, x: 220, y: 80 },
+  { key: "cs", label: "Crafter Station", src: "/cs-brand-black.png", aspect: 7347 / 1940, width: 360, x: 100, y: 1370 },
 ];
 
 export default function PlaygroundPage() {
@@ -48,43 +49,34 @@ export default function PlaygroundPage() {
   const [firstName, setFirstName] = useState("CRIS");
   const [role, setRole] = useState("BUILDER");
 
-  // Dark backdrop behind Zero-to-Agent
-  const [z2aBgEnabled, setZ2aBgEnabled] = useState(false);
-  const [z2aBgPaddingX, setZ2aBgPaddingX] = useState(15);
-  const [z2aBgPaddingY, setZ2aBgPaddingY] = useState(12);
-  const [z2aBgColor, setZ2aBgColor] = useState("#0a0a0a");
-
-  // QR code
-  const [qrX, setQrX] = useState(900);
-  const [qrY, setQrY] = useState(1090);
-  const [qrSize, setQrSize] = useState(120);
+  const [qrX, setQrX] = useState(850);
+  const [qrY, setQrY] = useState(1340);
+  const [qrSize, setQrSize] = useState(130);
 
   const updateLogo = (key: LogoSpec["key"], patch: Partial<LogoSpec>) => {
     setLogos((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
   const getNameFontSize = (name: string) => {
-    if (name.length > 12) return 52;
-    if (name.length > 8) return 64;
-    return 72;
+    if (name.length > 12) return 56;
+    if (name.length > 8) return 68;
+    return 76;
   };
 
   const snippet = `// lib/generate-badge.tsx
 ${logos
   .map((l) => {
     const h = Math.round(l.width / l.aspect);
-    const constName =
-      l.key === "v0" ? "V0_LOGO" : l.key === "cs" ? "CS_LOGO" : "Z2A_LOGO";
+    const constName = l.key === "gtm" ? "GTM_LOGO" : "CS_LOGO";
     return `const ${constName} = { width: ${l.width}, height: ${h}, top: ${l.y}, left: ${l.x}, src: "${l.src.replace(/^\//, "")}" };`;
   })
   .join("\n")}
-const Z2A_BG = { enabled: ${z2aBgEnabled}, paddingX: ${z2aBgPaddingX}, paddingY: ${z2aBgPaddingY}, color: "${z2aBgColor}" };
 const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
 
   return (
     <div className="min-h-dvh bg-background text-foreground p-6 flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xs uppercase tracking-widest font-bold">Badge Logo Playground</h1>
+        <h1 className="text-xs uppercase tracking-widest font-bold">LatamBuilds Badge Playground</h1>
         <a
           href="/"
           className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
@@ -110,7 +102,7 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
               <rect width={BADGE_WIDTH} height={BADGE_HEIGHT} fill={COLORS.background} />
 
               {/* radial bg pattern */}
-              <g opacity="0.08">
+              <g opacity="0.05">
                 {Array.from({ length: 24 }).map((_, i) => (
                   <line
                     key={`r-${i}`}
@@ -118,7 +110,7 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
                     y1={BADGE_HEIGHT / 2}
                     x2={BADGE_WIDTH / 2 + Math.cos((i * 15 * Math.PI) / 180) * 1400}
                     y2={BADGE_HEIGHT / 2 + Math.sin((i * 15 * Math.PI) / 180) * 1400}
-                    stroke={COLORS.black}
+                    stroke={COLORS.ink}
                     strokeWidth="2"
                   />
                 ))}
@@ -132,18 +124,50 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
                       })
                       .join(" ")}
                     fill="none"
-                    stroke={COLORS.black}
+                    stroke={COLORS.ink}
                     strokeWidth="1.5"
                   />
                 ))}
               </g>
 
-              {/* photo placeholder */}
-              <rect x={PHOTO_X} y={PHOTO_Y} width={PHOTO_SIZE} height={PHOTO_SIZE} fill={COLORS.photoPlaceholder} />
+              {/* corner crosses */}
+              {[
+                { x: 30, y: 30 },
+                { x: BADGE_WIDTH - 54, y: 30 },
+                { x: 30, y: BADGE_HEIGHT - 54 },
+                { x: BADGE_WIDTH - 54, y: BADGE_HEIGHT - 54 },
+              ].map((c, i) => (
+                <text
+                  key={`cross-${i}`}
+                  x={c.x + 12}
+                  y={c.y + 22}
+                  fill={COLORS.accent}
+                  fontSize="36"
+                  fontFamily="'Geist Mono', monospace"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  +
+                </text>
+              ))}
+
+              {/* top hairline + diamond */}
+              <line x1="80" y1="60" x2={BADGE_WIDTH - 80} y2="60" stroke={COLORS.border} strokeWidth="1" />
+              <rect
+                x={BADGE_WIDTH / 2 - 4}
+                y={56}
+                width="8"
+                height="8"
+                fill={COLORS.accent}
+                transform={`rotate(45, ${BADGE_WIDTH / 2}, 60)`}
+              />
+
+              {/* photo tile */}
+              <rect x={PHOTO_LEFT} y={PHOTO_TOP} width={PHOTO_SIZE} height={PHOTO_SIZE} fill={COLORS.photoTile} />
               <text
-                x={PHOTO_X + PHOTO_SIZE / 2}
-                y={PHOTO_Y + PHOTO_SIZE / 2}
-                fill="#999"
+                x={PHOTO_LEFT + PHOTO_SIZE / 2}
+                y={PHOTO_TOP + PHOTO_SIZE / 2}
+                fill="#bbb"
                 fontSize="48"
                 fontFamily="'Geist Mono', monospace"
                 textAnchor="middle"
@@ -152,29 +176,32 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
                 PHOTO
               </text>
 
-              {/* corner accents */}
-              <rect x={PHOTO_X} y={PHOTO_Y} width="8" height="40" fill={COLORS.primary} />
-              <rect x={PHOTO_X} y={PHOTO_Y} width="40" height="8" fill={COLORS.primary} />
-              <rect x={PHOTO_RIGHT - 8} y={PHOTO_Y} width="8" height="40" fill={COLORS.primary} />
-              <rect x={PHOTO_RIGHT - 40} y={PHOTO_Y} width="40" height="8" fill={COLORS.primary} />
-              <rect x={PHOTO_X} y={PHOTO_BOTTOM - 40} width="8" height="40" fill={COLORS.primary} />
-              <rect x={PHOTO_X} y={PHOTO_BOTTOM - 8} width="40" height="8" fill={COLORS.primary} />
-              <rect x={PHOTO_RIGHT - 8} y={PHOTO_BOTTOM - 40} width="8" height="40" fill={COLORS.primary} />
-              <rect x={PHOTO_RIGHT - 40} y={PHOTO_BOTTOM - 8} width="40" height="8" fill={COLORS.primary} />
+              {/* corner accents (lavender) */}
+              {[
+                { x: PHOTO_LEFT, y: PHOTO_TOP, dx: 1, dy: 1 },
+                { x: PHOTO_LEFT + PHOTO_SIZE - 8, y: PHOTO_TOP, dx: -1, dy: 1, hx: PHOTO_LEFT + PHOTO_SIZE - 48 },
+                { x: PHOTO_LEFT, y: PHOTO_BOTTOM - 48, dx: 1, dy: -1, hy: PHOTO_BOTTOM - 8 },
+                { x: PHOTO_LEFT + PHOTO_SIZE - 8, y: PHOTO_BOTTOM - 48, dx: -1, dy: -1, hx: PHOTO_LEFT + PHOTO_SIZE - 48, hy: PHOTO_BOTTOM - 8 },
+              ].map((c, i) => (
+                <g key={`acc-${i}`}>
+                  <rect x={c.x} y={c.y} width="8" height="48" fill={COLORS.accent} />
+                  <rect x={c.hx ?? c.x} y={c.hy ?? c.y} width="48" height="8" fill={COLORS.accent} />
+                </g>
+              ))}
 
               {/* L-bracket */}
               <path
-                d={`M60 ${BRACKET_TOP} L60 ${BRACKET_BOTTOM} L200 ${BRACKET_BOTTOM}`}
+                d={`M60 ${BRACKET_TOP} L60 ${BRACKET_BOTTOM} L220 ${BRACKET_BOTTOM}`}
                 fill="none"
-                stroke={COLORS.black}
+                stroke={COLORS.ink}
                 strokeWidth="16"
               />
 
               {/* first name */}
               <text
                 x="100"
-                y={NAME_Y}
-                fill={COLORS.black}
+                y={NAME_TOP}
+                fill={COLORS.ink}
                 fontSize={getNameFontSize(firstName)}
                 fontWeight="700"
                 fontFamily="'Geist Mono', monospace"
@@ -186,33 +213,46 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
               {/* role */}
               <text
                 x="100"
-                y={ROLE_Y}
-                fill={COLORS.gray}
+                y={ROLE_TOP}
+                fill={COLORS.dim}
                 fontSize="24"
                 fontFamily="'Geist Mono', monospace"
-                letterSpacing="0.1em"
+                letterSpacing="0.18em"
               >
                 → {role.toUpperCase()}
               </text>
 
               {/* divider */}
-              <line x1="60" y1={DIVIDER_Y} x2="1020" y2={DIVIDER_Y} stroke={COLORS.black} strokeWidth="2" />
+              <line x1="60" y1={DIVIDER_TOP} x2="260" y2={DIVIDER_TOP} stroke={COLORS.accent} strokeWidth="2" />
+              <line x1="264" y1={DIVIDER_TOP} x2={BADGE_WIDTH - 60} y2={DIVIDER_TOP} stroke={COLORS.border} strokeWidth="1" />
 
-              {/* Z2A dark backdrop (drawn before logos so it sits underneath) */}
-              {z2aBgEnabled &&
-                (() => {
-                  const z2a = logos.find((l) => l.key === "z2a")!;
-                  const h = Math.round(z2a.width / z2a.aspect);
-                  return (
-                    <rect
-                      x={z2a.x - z2aBgPaddingX}
-                      y={z2a.y - z2aBgPaddingY}
-                      width={z2a.width + z2aBgPaddingX * 2}
-                      height={h + z2aBgPaddingY * 2}
-                      fill={z2aBgColor}
-                    />
-                  );
-                })()}
+              {/* LATAMBUILDS_ caption (under GTM logo) */}
+              <text
+                x={BADGE_WIDTH / 2}
+                y={(logos.find((l) => l.key === "gtm")?.y ?? 80) + Math.round((logos.find((l) => l.key === "gtm")?.width ?? 640) / (956 / 157)) + 28}
+                fill={COLORS.accentInk}
+                fontSize="18"
+                fontWeight="700"
+                fontFamily="'Geist Mono', monospace"
+                letterSpacing="0.4em"
+                textAnchor="middle"
+              >
+                LATAMBUILDS_
+              </text>
+
+              {/* tagline */}
+              <text
+                x={BADGE_WIDTH / 2}
+                y={BADGE_HEIGHT - 50}
+                fill={COLORS.muted}
+                fontSize="18"
+                fontFamily="'Geist Mono', monospace"
+                letterSpacing="0.24em"
+                textAnchor="middle"
+                style={{ textTransform: "uppercase" }}
+              >
+                REAL CHALLENGES, REAL RESULTS_
+              </text>
 
               {/* Logos */}
               {logos.map((l) => {
@@ -225,29 +265,25 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
                       width={l.width + 4}
                       height={h + 4}
                       fill="none"
-                      stroke={COLORS.primary}
+                      stroke={COLORS.accent}
                       strokeWidth="2"
                       strokeDasharray="8 6"
                       opacity="0.4"
                     />
-                    <image href={l.src} x={l.x} y={l.y} width={l.width} height={h} preserveAspectRatio="xMidYMid meet" />
+                    <image
+                      href={l.src}
+                      x={l.x}
+                      y={l.y}
+                      width={l.width}
+                      height={h}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
                   </g>
                 );
               })}
 
-              {/* QR code placeholder */}
-              <rect
-                x={qrX - 2}
-                y={qrY - 2}
-                width={qrSize + 4}
-                height={qrSize + 4}
-                fill="none"
-                stroke={COLORS.primary}
-                strokeWidth="2"
-                strokeDasharray="8 6"
-                opacity="0.4"
-              />
-              <rect x={qrX} y={qrY} width={qrSize} height={qrSize} fill="#ddd" stroke={COLORS.black} strokeWidth="1" />
+              {/* QR placeholder */}
+              <rect x={qrX} y={qrY} width={qrSize} height={qrSize} fill="#ddd" />
               <text
                 x={qrX + qrSize / 2}
                 y={qrY + qrSize / 2}
@@ -308,49 +344,6 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
               </div>
             );
           })}
-
-          <div className="border border-accent/20 p-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider font-bold">Zero to Agent backdrop</span>
-              <label className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={z2aBgEnabled}
-                  onChange={(e) => setZ2aBgEnabled(e.target.checked)}
-                  className="accent-[var(--accent)]"
-                />
-                Enabled
-              </label>
-            </div>
-            <Control
-              label="Padding X"
-              value={z2aBgPaddingX}
-              unit="px"
-              min={0}
-              max={80}
-              step={1}
-              onChange={setZ2aBgPaddingX}
-            />
-            <Control
-              label="Padding Y"
-              value={z2aBgPaddingY}
-              unit="px"
-              min={0}
-              max={80}
-              step={1}
-              onChange={setZ2aBgPaddingY}
-            />
-            <label className="flex items-center gap-3">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-20 shrink-0">Color</span>
-              <input
-                type="color"
-                value={z2aBgColor}
-                onChange={(e) => setZ2aBgColor(e.target.value)}
-                className="h-8 w-16 bg-transparent border border-accent/20 cursor-pointer"
-              />
-              <span className="text-[10px] font-mono text-muted-foreground">{z2aBgColor}</span>
-            </label>
-          </div>
 
           <div className="border border-accent/20 p-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
