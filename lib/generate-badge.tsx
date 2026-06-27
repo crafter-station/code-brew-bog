@@ -26,8 +26,8 @@ const COLORS = {
   background: "#fafafa",
   ink: "#22242f",
   paper: "#fafafa",
-  accent: "#e7acff",
-  accentInk: "#7a3aa8",
+  accent: "#26251e",
+  accentInk: "#26251e",
   dim: "rgba(34, 36, 47, 0.62)",
   muted: "rgba(34, 36, 47, 0.4)",
   border: "rgba(34, 36, 47, 0.16)",
@@ -37,12 +37,12 @@ const COLORS = {
 const BADGE_WIDTH = 1080;
 const BADGE_HEIGHT = 1600;
 
-const GTM_LOGO = {
-  width: 640,
-  height: Math.round((640 * 157) / 956),
+const CURSOR_LOGO = {
+  width: 460,
+  height: Math.round((460 * 532.09) / 2238.7),
   top: 80,
-  left: (BADGE_WIDTH - 640) / 2,
-  src: "the-gtm-hackathon.svg",
+  left: (BADGE_WIDTH - 460) / 2,
+  src: "cursor-lockup.svg",
 };
 
 const PHOTO_SIZE = 860;
@@ -205,23 +205,23 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
         }}
       />
 
-      {/* GTM Hackathon wordmark backdrop (composited later) */}
+      {/* Cursor lockup backdrop (composited later) */}
       <div
         style={{
           position: "absolute",
-          top: GTM_LOGO.top,
-          left: GTM_LOGO.left,
-          width: GTM_LOGO.width,
-          height: GTM_LOGO.height,
+          top: CURSOR_LOGO.top,
+          left: CURSOR_LOGO.left,
+          width: CURSOR_LOGO.width,
+          height: CURSOR_LOGO.height,
           backgroundColor: COLORS.background,
         }}
       />
 
-      {/* "LATAMBUILDS_" small caps under wordmark */}
+      {/* "CURSOR_" small caps under lockup */}
       <div
         style={{
           position: "absolute",
-          top: GTM_LOGO.top + GTM_LOGO.height + 14,
+          top: CURSOR_LOGO.top + CURSOR_LOGO.height + 14,
           left: 0,
           width: BADGE_WIDTH,
           color: COLORS.accentInk,
@@ -234,7 +234,7 @@ function BadgeTemplate({ data }: { data: BadgeData }) {
           justifyContent: "center",
         }}
       >
-        LATAMBUILDS_
+        CURSOR_
       </div>
 
       {/* Photo tile */}
@@ -390,8 +390,8 @@ export async function generateBadge(
 
   // Get fonts and logos
   const fonts = await getFonts();
-  const [gtmBuffer, csBuffer] = await Promise.all([
-    getLogoBuffer(GTM_LOGO),
+  const [cursorBuffer, csBuffer] = await Promise.all([
+    getLogoBuffer(CURSOR_LOGO),
     getLogoBuffer(CS_LOGO),
   ]);
 
@@ -412,7 +412,7 @@ export async function generateBadge(
   const badgeBuffer = await sharp(Buffer.from(badgeSvg))
     .composite([
       { input: processedPhoto, top: PHOTO_TOP, left: PHOTO_LEFT },
-      { input: gtmBuffer, top: GTM_LOGO.top, left: GTM_LOGO.left },
+      { input: cursorBuffer, top: CURSOR_LOGO.top, left: CURSOR_LOGO.left },
       { input: csBuffer, top: CS_LOGO.top, left: CS_LOGO.left },
       { input: qrCodeBuffer, top: QR.top, left: QR.left },
     ])
