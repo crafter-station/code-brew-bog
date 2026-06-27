@@ -378,7 +378,7 @@ export async function generateBadge(
     .toBuffer();
 
   // Generate QR code (dark fg on paper bg so it scans)
-  const qrTargetUrl = "https://crafters.chat/";
+  const qrTargetUrl = "https://cursor.crafter.run/";
 
   const qrCodeBuffer = await QRCode.toBuffer(qrTargetUrl, {
     errorCorrectionLevel: "M",
