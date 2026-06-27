@@ -20,8 +20,8 @@ const COLORS = {
   background: "#fafafa",
   ink: "#22242f",
   paper: "#fafafa",
-  accent: "#e7acff",
-  accentInk: "#7a3aa8",
+  accent: "#26251e",
+  accentInk: "#26251e",
   border: "rgba(34, 36, 47, 0.16)",
   muted: "rgba(34, 36, 47, 0.4)",
   dim: "rgba(34, 36, 47, 0.62)",
@@ -29,7 +29,7 @@ const COLORS = {
 };
 
 interface LogoSpec {
-  key: "gtm" | "cs";
+  key: "cursor" | "cs";
   label: string;
   src: string;
   aspect: number;
@@ -40,7 +40,7 @@ interface LogoSpec {
 }
 
 const INITIAL_LOGOS: LogoSpec[] = [
-  { key: "gtm", label: "GTM Hackathon", src: "/the-gtm-hackathon.svg", aspect: 956 / 157, width: 640, x: 220, y: 80 },
+  { key: "cursor", label: "Cursor", src: "/cursor-lockup.svg", aspect: 2238.7 / 532.09, width: 460, x: 310, y: 80 },
   { key: "cs", label: "Crafter Station", src: "/cs-brand-black.png", aspect: 7347 / 1940, width: 360, x: 100, y: 1370 },
 ];
 
@@ -67,7 +67,7 @@ export default function PlaygroundPage() {
 ${logos
   .map((l) => {
     const h = Math.round(l.width / l.aspect);
-    const constName = l.key === "gtm" ? "GTM_LOGO" : "CS_LOGO";
+    const constName = l.key === "cursor" ? "CURSOR_LOGO" : "CS_LOGO";
     return `const ${constName} = { width: ${l.width}, height: ${h}, top: ${l.y}, left: ${l.x}, src: "${l.src.replace(/^\//, "")}" };`;
   })
   .join("\n")}
@@ -226,10 +226,10 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
               <line x1="60" y1={DIVIDER_TOP} x2="260" y2={DIVIDER_TOP} stroke={COLORS.accent} strokeWidth="2" />
               <line x1="264" y1={DIVIDER_TOP} x2={BADGE_WIDTH - 60} y2={DIVIDER_TOP} stroke={COLORS.border} strokeWidth="1" />
 
-              {/* LATAMBUILDS_ caption (under GTM logo) */}
+              {/* CURSOR_ caption (under Cursor logo) */}
               <text
                 x={BADGE_WIDTH / 2}
-                y={(logos.find((l) => l.key === "gtm")?.y ?? 80) + Math.round((logos.find((l) => l.key === "gtm")?.width ?? 640) / (956 / 157)) + 28}
+                y={(logos.find((l) => l.key === "cursor")?.y ?? 80) + Math.round((logos.find((l) => l.key === "cursor")?.width ?? 460) / (2238.7 / 532.09)) + 28}
                 fill={COLORS.accentInk}
                 fontSize="18"
                 fontWeight="700"
@@ -237,7 +237,7 @@ const QR = { size: ${qrSize}, top: ${qrY}, left: ${qrX} };`;
                 letterSpacing="0.4em"
                 textAnchor="middle"
               >
-                LATAMBUILDS_
+                CURSOR_
               </text>
 
               {/* tagline */}
