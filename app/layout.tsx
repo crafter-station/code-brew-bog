@@ -8,7 +8,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "v0",
+  title: "Cursor",
   description: "Take a photo, get a pixel-art badge",
 };
 
