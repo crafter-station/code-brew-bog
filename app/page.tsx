@@ -426,15 +426,7 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-accent/20 z-10">
-        <div className="flex items-center gap-2">
-          <Image
-            src="/v0-logo-dark.svg"
-            alt="v0"
-            width={26}
-            height={12}
-            priority
-          />
-        </div>
+        <div className="flex items-center gap-2" />
         <Link
           href="/gallery"
           className="relative flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
